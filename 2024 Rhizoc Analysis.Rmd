@@ -1,0 +1,108 @@
+---
+title: "2024 RCRR field trial analysis"
+author: "Sam McNeill"
+date: "2025-09-07"
+output: pdf_document
+---
+
+Rhizoctonia Disease Field Evaluation 2024 - 1R Analysis
+
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(car)
+library(emmeans)
+
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r}
+data <- read.csv("path/to/data/1R Field Data for R.csv", header = T)
+
+#print(head(data))
+
+#initial_rows <- nrow(data)
+data_clean <- data %>%
+  filter(!is.na(rep))
+
+#removed_rows <- initial_rows - nrow(data_clean)
+#cat("Removed", removed_rows, "rows with missing Rep values\n")
+#cat("Working with", nrow(data_clean), "observations\n\n")
+
+
+data_transformed <- data_clean %>%
+  mutate(
+    # arcsine square root transformations to stabilize variance and normalize data
+    APHLTHY = 57.2958 * asin(sqrt(PHLTHY)),
+    APHRVST = 57.2958 * asin(sqrt(PHRVST)),
+    
+    # convert proportions to percentages
+    PHLTHY_pct = PHLTHY * 100,
+    PHRVST_pct = PHRVST * 100
+  )
+# sort data by Entry
+data_sorted <- data_transformed %>% arrange(Entry)
+
+#Remove data with no MEDIANRATING
+data_sorted <- data_sorted %>%
+  filter(!is.na(MEDIANRATING))
+
+#Add ranks and make entry a factor
+data_sorted$r <- rank(data_sorted$MEDIANRATING, ties.method = "average")
+data_sorted$Entry <- as.factor(data_sorted$Entry)
+```
+
+Summary Table
+```{r}
+data_sorted %>%
+  group_by(Entry) %>%
+  summarise(
+    DI_mean = mean(DI, na.rm = TRUE),
+    PHLTHY_mean = mean(PHLTHY_pct, na.rm = TRUE),
+    PHRVST_mean = mean(PHRVST_pct, na.rm = TRUE),
+    APHLTHY_mean = mean(APHLTHY, na.rm = TRUE),
+    APHRVST_mean = mean(APHRVST, na.rm = TRUE)
+  )
+```
+
+Linear Model 
+```{r}
+#Fit linear model
+lm <- lm(r ~ Entry, data = data_sorted)
+
+#Model Summary
+summary(lm)
+
+#Least Square Means
+lsmeans_result <- emmeans(lm, ~ Entry)
+
+#Dunnett's tests
+dunnett_fc901 <- contrast(lsmeans_result, method = "dunnett", ref = "FC901")
+dunnett_FC709_2 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-2")
+dunnett_FC709_4 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-4")
+
+#ANOVA (type 3 same as SAS)
+#Anova(lm, type = "III", test = "Chisq")
+
+#Summary output
+summary(lsmeans_result)
+summary(dunnett_fc901, adjust = "dunnett")
+summary(dunnett_FC709_2, adjust = "dunnett")
+summary(dunnett_FC709_4, adjust = "dunnett")
+
+```
+
+Mixed Model One-way ANOVA on Ranks
+```{r}
+#mixed_model <- lmer(r ~ Entry + (1|rep), data = data_sorted)
+
+#Least Square Means
+#lsmeans_result <- emmeans(mixed_model, ~ Entry)
+
+#Dunnett's tests
+#dunnett_fc901 <- contrast(lsmeans_result, method = "dunnett", ref = "FC901")
+#dunnett_FC709_2 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-2")
+#dunnett_FC709_4 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-4")
+
+```
