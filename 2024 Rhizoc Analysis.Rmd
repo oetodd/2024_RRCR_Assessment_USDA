@@ -12,7 +12,7 @@ Rhizoctonia Disease Field Evaluation 2024 - 1R Analysis
 library(dplyr)
 library(car)
 library(emmeans)
-library(lme4)
+library(nlme)
 
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -94,16 +94,12 @@ summary(dunnett_FC709_4, adjust = "dunnett")
 
 ```
 
-Mixed Model One-way ANOVA on Ranks
+Generalized Least Squares Model
 ```{r}
-#mixed_model <- lmer(r ~ Entry + (1|rep), data = data_sorted)
+# Fit model allowing different variances per entry
+#rank_model_hetero <- gls(r ~ Entry, 
+#                          data = data_sorted,
+#                         weights = varIdent(form = ~ 1 | Entry))
 
-#Least Square Means
-#lsmeans_result <- emmeans(mixed_model, ~ Entry)
-
-#Dunnett's tests
-#dunnett_fc901 <- contrast(lsmeans_result, method = "dunnett", ref = "FC901")
-#dunnett_FC709_2 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-2")
-#dunnett_FC709_4 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-4")
-
+# Note the false convergence
 ```
