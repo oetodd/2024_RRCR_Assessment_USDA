@@ -12,6 +12,7 @@ Rhizoctonia Disease Field Evaluation 2024 - 1R Analysis
 library(dplyr)
 library(car)
 library(emmeans)
+library(lme4)
 
 knitr::opts_chunk$set(echo = TRUE)
 
