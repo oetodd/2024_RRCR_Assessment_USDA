@@ -84,7 +84,7 @@ dunnett_FC709_2 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-2")
 dunnett_FC709_4 <- contrast(lsmeans_result, method = "dunnett", ref = "FC709-4")
 
 #ANOVA (type 3 same as SAS)
-#Anova(lm, type = "III", test = "Chisq")
+Anova(lm, type = "III", test = "Chisq")
 
 #Summary output
 summary(lsmeans_result)
@@ -97,9 +97,12 @@ summary(dunnett_FC709_4, adjust = "dunnett")
 Generalized Least Squares Model
 ```{r}
 # Fit model allowing different variances per entry
+# Attempts heterogeneous variance (different variance per entry)
+# May not converge if variances are similar across groups
+
 #rank_model_hetero <- gls(r ~ Entry, 
 #                          data = data_sorted,
 #                         weights = varIdent(form = ~ 1 | Entry))
 
-# Note the false convergence
+# Note the false convergence error
 ```
