@@ -1,0 +1,94 @@
+/*Rhizoctonia 2024 1R final 
+All Completely randomized design w/ 5 reps per entry*/
+
+LIBNAME Rhizoc "<WORKING DIRECTORY>";
+
+/*******1R*********/
+PROC IMPORT OUT= WORK.temp_1R 
+            DATAFILE= "<Data File Location>" 
+            DBMS=EXCEL REPLACE;
+     RANGE="2024 1R final$"; 
+     GETNAMES=YES;
+     MIXED=NO;
+     SCANTEXT=YES;
+     USEDATE=YES;
+     SCANTIME=YES;
+RUN;
+
+ods pdf file = "<OUTPUT FILE DESTINATION>";
+
+TITLE1 'Rhizoctonia Disease 1R 2024';
+TITLE2 'PROC Tabulate Summary Table (DI), 0-1 & 0-3' ; 
+**change title based on SET;
+TITLE3 ' ';
+
+OPTIONS NOCENTER;
+OPTIONS PAGESIZE = 60;
+DATA WORK.ANOVA;
+SET Work.Temp_1R;  **1R in Title2;
+	if rep = '.' then delete;
+   APHLTHY = 57.2958*ARSIN( SQRT(PHLTHY) );
+   APHRVST = 57.2958*ARSIN(  SQRT(PHRVST) );
+     PHLTHY = 100 * PHLTHY;
+     PHRVST = 100 * PHRVST;
+PROC SORT DATA = WORK.ANOVA;
+   BY ENTRY;
+   RUN;
+PROC TABULATE NOSEPS;
+   CLASS ENTRY;
+   VAR DI PHLTHY PHRVST APHLTHY APHRVST;
+   LABEL
+      PHLTHY = '%0-1'
+      PHRVST = '%0-3'
+      APHLTHY = 'A%0-1'
+      APHRVST = 'A%0-3';
+   TABLE ((ENTRY*F=4.0) ALL), (DI*F=5.2 (PHLTHY PHRVST)*F=6.2
+          (APHLTHY APHRVST)*F=7.2)*MEAN
+          /RTSPACE=29 BOX='TITLE';
+    RUN;
+
+
+/*********1-way analysis for 'median' ratings***************/
+/*Rank observations before Mixed Procedure*/
+DATA WORK.ANOVA;
+SET Work.Temp_1R;
+if MedianRating = '.' then delete;
+run;
+PROC RANK Data=anova out=anova;
+	var MedianRating;
+	ranks r;
+run;
+
+PROC MIXED data=anova anovaf;
+	TITLE2 '1-way analysis of Ranks using MIXED';
+	CLASS entry;
+	MODEL r = entry / chisq ;
+	lsmeans entry ;
+		lsmeans ENTRY / diff=control('FC901') adjust=dunnett ; /*Susck*/
+		lsmeans ENTRY / diff=control('FC709-2') adjust=dunnett; /*ResCk#1*/
+		lsmeans ENTRY / diff=control('FC709-4') adjust=dunnett; /*ResCk#2*/
+	ods output lsmeans=lsmeans_onranks diffs=diffs_onranks;
+run;
+
+ods pdf close;
+/*****1R*******/
+data Rhizoc.RhizFieldEval2024_1R_Dunnetts;
+set work.diffs_onranks;
+run;
+proc sort DATA=lsmeans_onranks OUT=Rhizoc.RhizFieldEval2024_1R_lsmeans NODUPKEY;
+	BY ENTRY;
+run;
+
+/*PROC EXPORT STATEMENTS*/
+/*Update with results from 2022 data*/
+PROC EXPORT DATA= Rhizoc.RhizFieldEval2024_1R_Dunnetts
+            OUTFILE= "<OUTPUT FILE LOCATION>\RhizocOutput_2024_1R_<DATE>.xlsx" 
+            DBMS=EXCELCS REPLACE;
+     SHEET="Dunnetts_1R"; 
+RUN;
+
+PROC EXPORT DATA= Rhizoc.RhizFieldEval2024_1R_lsmeans
+            OUTFILE= "<OUTPUT FILE LOCATION>\RhizocOutput_2024_1R_<DATE>.xlsx"  
+            DBMS=EXCELCS REPLACE;
+     SHEET="LSMEANS_ranks_1R"; 
+RUN;
